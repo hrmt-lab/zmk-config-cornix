@@ -1,0 +1,11 @@
+file_format: "1"
+id: cornix_dongle
+name: Cornix Dongle (XIAO)
+type: shield
+url: https://github.com/hrmt-lab/zmk-config-cornix
+requires: [seeeduino_xiao_ble]
+features:
+  - keys
+  - encoder
+  - studio
+  - display

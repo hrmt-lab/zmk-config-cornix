@@ -1,0 +1,20 @@
+if SHIELD_CORNIX_DONGLE
+
+config ZMK_KEYBOARD_NAME
+    default "Cornix"
+
+# Dongle = BLE split central with 2 peripherals (left + right halves)
+config ZMK_SPLIT
+    default y
+
+config ZMK_SPLIT_ROLE_CENTRAL
+    default y
+
+config ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS
+    default 2
+
+# P0.09 / P0.10 used as GPIO matrix columns (NFC pins repurposed)
+config NFCT_PINS_AS_GPIOS
+    default y
+
+endif # SHIELD_CORNIX_DONGLE

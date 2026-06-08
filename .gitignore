@@ -1,0 +1,6 @@
+# Windows "downloaded file" alternate-data-stream junk
+*:Zone.Identifier
+
+# Build artifacts (kept at the workspace level, never inside this config)
+.build/
+firmware/

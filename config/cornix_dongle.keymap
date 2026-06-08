@@ -1,0 +1,344 @@
+/*
+ * Copyright (c) 2020 The ZMK Contributors
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Cornix (XIAO nRF52840 dongle) keymap.
+ *
+ * Layout = 68 keys:
+ *   - positions  0..49 : cornix split halves (reported by the peripherals)
+ *   - positions 50..67 : the 18 physical keys on the dongle (3 rows x 6 cols,
+ *                        placed "below" the cornix via matrix row-offset=4)
+ *
+ * Encoders (left & right halves) are bound on every layer:
+ *   - left  encoder -> vertical mouse scroll   (&inc_dec_ms SCRL_DOWN SCRL_UP)
+ *   - right encoder -> horizontal mouse scroll (&inc_dec_ms SCRL_RIGHT SCRL_LEFT)
+ *
+ * Prospector control keys (touch disabled -> keycodes), default keycodes:
+ *   F20 -> dark-theme toggle, F21 -> AI-Usage screen toggle,
+ *   F23 -> brightness down,   F24 -> brightness up.
+ * They are placed in the Settings (Debug) layer.
+ */
+
+#include "includes/cornix54.h"
+
+// tap windows for ctl alt and gui
+
+#define HM_TAPPING_TERM 250
+#define HM_TAPPING_REPEAT 210
+
+// quick tapping for shift
+
+#define HM_TAPPING_TERM_FAST 200
+#define HM_PRIOR_IDLE 70
+#define BASE 0
+#define WIN 1
+#define LOWER 2
+#define RAISE 3
+#define ADJUST 4
+#define NAVI   5
+#define NUM    6
+#define DEBUG  7
+
+// https://github.com/urob/zmk-config/tree/main#timeless-homerow-mods
+
+#define KEYS_L LT0 LT1 LT2 LT3 LT4 LT5 LM0 LM1 LM2 LM3 LM4 LM5 LB0 LB1 LB2 LB3 LB4 LB5  // left hand
+#define KEYS_R RT0 RT1 RT2 RT3 RT4 RT5 RM0 RM1 RM2 RM3 RM4 RM5 RB0 RB1 RB2 RB3 RB4 RB5  // right hand
+#define THUMBS LH1 LH0 RH0 RH1
+#define KEYS_T LH1 LH0 RH0 RH1
+// Encoder scroll amount. The &msc behavior (input-two-axis) emits on a ~16ms
+// timer tick: move/tick = SCRL_VAL * trigger_period(16) / 1000. With accel
+// exponent 0 the speed is max immediately, but the fractional remainder is
+// DISCARDED when the sensor-rotate tap releases. So one tick must already yield
+// >= 1 unit -> SCRL_VAL must be >= ~63. 80 gives ~1 unit on the first tick.
+#define ZMK_POINTING_DEFAULT_SCRL_VAL 80
+
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/ext_power.h>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/pointing.h>
+
+/ {
+    behaviors {
+        hm_l: homerow_mods_left {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+
+            flavor = "balanced";
+            tapping-term-ms = <HM_TAPPING_TERM>;
+            quick-tap-ms = <200>;                // repeat on tap-into-hold
+            require-prior-idle-ms = <HM_PRIOR_IDLE>;
+            hold-trigger-key-positions = <KEYS_R KEYS_T>;
+            hold-trigger-on-release;
+        };
+
+        hm_r: homerow_mods_right {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+
+            flavor = "balanced";
+            tapping-term-ms = <HM_TAPPING_TERM>;
+            quick-tap-ms = <200>;
+            require-prior-idle-ms = <HM_PRIOR_IDLE>;
+            hold-trigger-key-positions = <KEYS_L KEYS_T>;
+            hold-trigger-on-release;
+        };
+
+        // Positional Homerow mods for shift
+        // Use faster tapping term and disable some features that may
+        // cause false negatives.
+
+        hm_shift_l: hm_shift_l {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+
+            flavor = "balanced";
+            tapping-term-ms = <HM_TAPPING_TERM_FAST>;
+            quick-tap-ms = <200>;
+            require-prior-idle-ms = <HM_PRIOR_IDLE>;
+            hold-trigger-key-positions = <KEYS_R KEYS_T>;
+            hold-trigger-on-release;
+        };
+
+        hm_shift_r: hm_shift_r {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+
+            flavor = "balanced";
+            tapping-term-ms = <HM_TAPPING_TERM_FAST>;
+            quick-tap-ms = <200>;
+            require-prior-idle-ms = <HM_PRIOR_IDLE>;
+            hold-trigger-key-positions = <KEYS_L KEYS_T>;
+            hold-trigger-on-release;
+        };
+
+        /*
+         * Non-Positional Homerow Mods
+         * Usage: &hm LSHFT T  -> Tap: T, Hold: LSHIFT
+         */
+
+        hm: homerow_mods {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+
+            flavor = "balanced";
+            tapping-term-ms = <HM_TAPPING_TERM>;
+            quick-tap-ms = <200>;
+        };
+
+        lt: layer_tap {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&mo>, <&kp>;
+
+            flavor = "hold-preferred";
+            tapping-term-ms = <HM_TAPPING_TERM>;
+            quick-tap-ms = <200>;
+        };
+
+        // Encoder -> mouse scroll (sensor rotate driving the &msc behavior).
+        inc_dec_ms: inc_dec_ms {
+            compatible = "zmk,behavior-sensor-rotate-var";
+            #sensor-binding-cells = <2>;
+            bindings = <&msc>, <&msc>;
+            // Hold long enough for the &msc 16ms timer tick to fire (and a 2nd
+            // at 32ms) so a detent reliably produces scroll; the original 20ms
+            // released before any tick emitted -> no scroll at all.
+            tap-ms = <40>;
+        };
+    };
+
+    combos {
+        compatible = "zmk,combos";
+
+        cb_esc {
+            bindings = <&kp ESC>;
+            key-positions = <0 1>;
+            layers = <0 1>;
+        };
+
+        cb_lm {
+            bindings = <&kp TAB>;
+            key-positions = <14 16>;
+            layers = <0 1>;
+        };
+
+        cb_enter {
+            bindings = <&kp RET>;
+            key-positions = <21 19>;
+            layers = <0 1>;
+        };
+
+        layer3 {
+            bindings = <&kp N3>;
+            key-positions = <5 6>;
+        };
+
+        layer4 {
+            bindings = <&kp N4>;
+            key-positions = <5 6>;
+        };
+
+        Settings {
+            bindings = <&mo 7>;
+            key-positions = <38 39>;
+        };
+
+        Settings2 {
+            bindings = <&mo 7>;
+            key-positions = <62 63>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+
+        default_layer {
+            display-name = "Base";
+            bindings = <
+&kp TAB     &kp Q   &kp W   &kp E            &kp R                  &kp T                               &kp Y      &kp U       &kp I      &kp O     &kp P      &kp BSPC
+&kp LCTRL   &kp A   &kp S   &kp D            &kp F                  &kp G                               &kp H      &kp J       &kp K      &kp L     &kp SEMI   &kp ENTER
+&kp LSHIFT  &kp Z   &kp X   &kp C            &kp V                  &kp B         &kp C_MUTE  &mkp MB4  &kp N      &kp M       &kp COMMA  &kp DOT   &kp SLASH  &kp INT_RO
+&kp ESC     &mo 1   &mo 3   &kp LGUI         &mt LALT INT_MUHENKAN  &lt 1 SPACE                         &lt 2 DEL  &lt 4 INT4  &mo 2      &kp LEFT  &kp DOWN   &kp RIGHT
+&kp N7      &kp N8  &kp N9  &kp KP_MULTIPLY                         &kp SLASH     &kp ESC
+&kp N4      &kp N5  &kp N6  &kp KP_PLUS                             &kp KP_MINUS  &kp BSPC
+&kp N1      &kp N2  &kp N3  &kp N0                                  &kp DOT       &kp ENTER
+            >;
+
+            sensor-bindings =
+                <&inc_dec_ms SCRL_DOWN SCRL_UP>,
+                <&inc_dec_ms SCRL_RIGHT SCRL_LEFT>;
+        };
+
+        layer_1 {
+            display-name = "Layer1";
+            bindings = <
+&kp ESC     &kp N1  &kp N2  &kp N3           &kp N4    &kp N5                              &kp N6     &kp N7       &kp N8  &kp N9   &kp N0     &kp LBKT
+&kp LCTRL   &none   &none   &none            &kp SEMI  &kp MINUS                           &kp MINUS  &kp N4       &kp N5  &kp N6   &none      &none
+&kp LSHIFT  &none   &none   &none            &none     &none         &kp C_MUTE  &mkp MB5  &none      &kp N1       &kp N2  &kp N3   &kp SLASH  &none
+&kp ESC     &none   &none   &none            &none     &none                               &kp DOT    &kp COMMA    &kp N0  &kp DOT  &none      &none
+&kp N7      &kp N8  &kp N9  &kp KP_MULTIPLY            &kp SLASH     &kp ESC
+&kp N4      &kp N5  &kp N6  &kp KP_PLUS                &kp KP_MINUS  &kp BSPC
+&kp N1      &kp N2  &kp N3  &kp N0                     &kp DOT       &kp ENTER
+            >;
+
+            sensor-bindings =
+                <&inc_dec_ms SCRL_DOWN SCRL_UP>,
+                <&inc_dec_ms SCRL_RIGHT SCRL_LEFT>;
+        };
+
+        layer_2 {
+            display-name = "Layer2";
+            bindings = <
+&kp ESC  &kp F1   &kp F2  &kp F3           &none     &none                               &none  &none     &kp LS(N8)    &kp LS(N9)       &none   &none
+&none    &kp F4   &kp F5  &kp F6           &none     &none                               &none  &kp LEFT  &kp RBKT      &kp BACKSLASH    &none   &none
+&none    &kp F7   &kp F8  &kp F9           &none     &none         &kp C_MUTE  &mkp MB3  &none  &none     &kp LS(RBKT)  &kp LS(BSLH)     &none   &none
+&none    &kp F10  &none   &none            &kp INT4  &none                               &none  &none     &none         &kp LC(LS(TAB))  &kp UP  &kp LC(TAB)
+&kp N7   &kp N8   &kp N9  &kp KP_MULTIPLY            &kp SLASH     &kp ESC
+&kp N4   &kp N5   &kp N6  &kp KP_PLUS                &kp KP_MINUS  &kp BSPC
+&kp N1   &kp N2   &kp N3  &kp N0                     &kp DOT       &kp ENTER
+            >;
+
+            sensor-bindings =
+                <&inc_dec_ms SCRL_DOWN SCRL_UP>,
+                <&inc_dec_ms SCRL_RIGHT SCRL_LEFT>;
+        };
+
+        layer_3 {
+            display-name = "Layer3";
+            bindings = <
+&none   &none   &none   &none            &none  &none                               &none  &none  &none  &none  &none  &none
+&none   &none   &none   &none            &none  &none                               &none  &none  &none  &none  &none  &none
+&none   &none   &none   &none            &none  &none         &kp C_MUTE  &mkp MB3  &none  &none  &none  &none  &none  &none
+&none   &none   &none   &none            &none  &none                               &none  &none  &none  &none  &none  &none
+&kp N7  &kp N8  &kp N9  &kp KP_MULTIPLY         &kp SLASH     &kp ESC
+&kp N4  &kp N5  &kp N6  &kp KP_PLUS             &kp KP_MINUS  &kp BSPC
+&kp N1  &kp N2  &kp N3  &kp N0                  &kp DOT       &kp ENTER
+            >;
+
+            sensor-bindings =
+                <&inc_dec_ms SCRL_DOWN SCRL_UP>,
+                <&inc_dec_ms SCRL_RIGHT SCRL_LEFT>;
+        };
+
+        layer_4 {
+            display-name = "Layer4";
+            bindings = <
+&kp ESC     &none       &kp LS(N5)  &kp INT_YEN      &none           &none                               &none     &none            &kp UP           &none      &none     &kp INT_YEN
+&kp LCTRL   &kp LS(N6)  &kp LS(N3)  &kp LS(N4)       &kp LS(N7)      &kp LS(N2)                          &kp HOME  &kp LEFT         &kp DOWN         &kp RIGHT  &kp APOS  &kp BACKSLASH
+&kp LSHIFT  &none       &none       &none            &none           &kp LS(N1)    &kp C_MUTE  &mkp MB3  &kp END   &mt LCTRL PG_UP  &mt LCTRL PG_DN  &none      &none     &none
+&kp ESC     &none       &none       &none            &kp INT_HENKAN  &none                               &none     &none            &none            &none      &none     &none
+&kp N7      &kp N8      &kp N9      &kp KP_MULTIPLY                  &kp SLASH     &kp ESC
+&kp N4      &kp N5      &kp N6      &kp KP_PLUS                      &kp KP_MINUS  &kp BSPC
+&kp N1      &kp N2      &kp N3      &kp N0                           &kp DOT       &kp ENTER
+            >;
+
+            sensor-bindings =
+                <&inc_dec_ms SCRL_DOWN SCRL_UP>,
+                <&inc_dec_ms SCRL_RIGHT SCRL_LEFT>;
+        };
+
+        Navi_layer {
+            display-name = "Navi";
+            bindings = <
+&none   &none   &none           &mmv MOVE_UP     &kp PAGE_UP      &kp PAGE_DOWN                      &mkp MB1  &mkp MB3  &mkp MB2  &msc SCRL_UP  &msc SCRL_DOWN  &none
+&none   &none   &mmv MOVE_LEFT  &mmv MOVE_DOWN   &mmv MOVE_RIGHT  &msc SCRL_UP                       &kp LEFT  &kp DOWN  &kp UP    &kp RIGHT     &none           &none
+&none   &none   &none           &none            &none            &msc SCRL_DOWN  &trans     &trans  &trans    &trans    &none     &none         &none           &none
+&none   &none   &none           &mo 7            &trans           &trans                             &none     &none     &kp N5    &none         &none           &none
+&kp N7  &kp N8  &kp N9          &kp KP_MULTIPLY                   &kp SLASH       &kp ESC
+&kp N4  &kp N5  &kp N6          &kp KP_PLUS                       &kp KP_MINUS    &kp BSPC
+&kp N1  &kp N2  &kp N3          &kp N0                            &kp DOT         &kp ENTER
+            >;
+
+            sensor-bindings =
+                <&inc_dec_ms SCRL_DOWN SCRL_UP>,
+                <&inc_dec_ms SCRL_RIGHT SCRL_LEFT>;
+        };
+
+        KeyPad_layer {
+            display-name = "NumPad";
+            bindings = <
+&mo 7   &none   &none   &none            &none  &none                            &kp KP_N7        &kp KP_N8        &kp KP_N9        &kp KP_MINUS  &kp KP_MULTIPLY  &none
+&none   &none   &none   &none            &none  &none                            &kp KP_NUMBER_4  &kp KP_NUMBER_5  &kp KP_N6        &kp KP_PLUS   &kp KP_DIVIDE    &none
+&none   &none   &none   &none            &none  &none         &trans     &trans  &kp KP_NUMBER_1  &kp KP_NUMBER_2  &kp KP_N3        &none         &none            &none
+&none   &none   &none   &none            &none  &mo 7                            &kp KP_N0        &kp KP_DOT       &kp KP_NUMBER_0  &none         &none            &none
+&kp N7  &kp N8  &kp N9  &kp KP_MULTIPLY         &kp SLASH     &kp ESC
+&kp N4  &kp N5  &kp N6  &kp KP_PLUS             &kp KP_MINUS  &kp BSPC
+&kp N1  &kp N2  &kp N3  &kp N0                  &kp DOT       &kp ENTER
+            >;
+
+            sensor-bindings =
+                <&inc_dec_ms SCRL_DOWN SCRL_UP>,
+                <&inc_dec_ms SCRL_RIGHT SCRL_LEFT>;
+        };
+
+        Debug_layer {
+            display-name = "Settings";
+
+            // Prospector control keys (touch disabled):
+            //   F20 = dark-theme toggle, F21 = AI-Usage screen toggle,
+            //   F23 = brightness down,   F24 = brightness up.
+            // Placed on the dongle number block of this layer.
+
+            bindings = <
+&bt BT_CLR  &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2     &bt BT_SEL 3  &bt BT_SEL 4                       &none        &none    &kp F24   &none    &none  &bootloader
+&none       &none         &none         &none            &none         &none                              &none        &kp F21  &kp F23   &kp F20  &none  &none
+&none       &none         &none         &none            &none         &bootloader   &trans       &trans  &bootloader  &none    &none     &none    &none  &none
+&none       &none         &none         &none            &none         &none                              &none        &none    &none     &none    &none  &studio_unlock
+&kp F20     &kp F21       &none         &kp F23                        &kp F24       &kp F22
+&none       &none         &none         &none                          &none         &none
+&none       &none         &none         &none                          &none         &bootloader
+            >;
+
+            sensor-bindings =
+                <&inc_dec_ms SCRL_DOWN SCRL_UP>,
+                <&inc_dec_ms SCRL_RIGHT SCRL_LEFT>;
+        };
+    };
+};

@@ -1,0 +1,6 @@
+name: cornix-config
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    board_root: .

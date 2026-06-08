@@ -1,0 +1,30 @@
+# GitHub Actions / local (just build) matrix for the Cornix dongle firmware.
+#
+#   - cornix_dongle : XIAO nRF52840 central (18 keys + Prospector + RawHID)
+#   - cornix_left   : left half  -> peripheral (cornix_ph_left board) + RGB indicator
+#   - cornix_right  : right half -> peripheral + RGB indicator
+#   - cornix_reset  : settings reset for a half
+---
+include:
+  # The dongle XIAO has a no-SoftDevice bootloader (INFO_UF2.TXT: "SoftDevice: not
+  # found"), so the app must be linked at 0x1000 via the nrf52840-nosd snippet.
+  - board: xiao_ble/nrf52840/zmk
+    shield: cornix_dongle prospector_adapter raw_hid_adapter
+    snippet: studio-rpc-usb-uart nrf52840-nosd
+    artifact-name: cornix_dongle
+
+  # NOTE: RGB indicator (cornix_indicator) is intentionally omitted. The cornix
+  # module marks RGB as an unimplemented future item and its cornix_indicator
+  # shield uses Kconfig symbols incompatible with the current Zephyr 4.1 toolchain
+  # (WS2812_STRIP -> WS2812_STRIP_SPI; RGBLED_WIDGET_WS2812/_LED_COUNT/... exist
+  # only in the hitsmaxft rgbled-widget fork). Enabling it requires patching the
+  # cornix module itself. See README.
+  - board: cornix_ph_left
+    artifact-name: cornix_left
+
+  - board: cornix_right
+    artifact-name: cornix_right
+
+  - board: cornix_right
+    shield: settings_reset
+    artifact-name: cornix_reset

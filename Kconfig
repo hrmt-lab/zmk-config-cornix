@@ -1,0 +1,2 @@
+# No config-repo-specific Kconfig symbols.
+# RawHID / Prospector options live in their respective modules.
