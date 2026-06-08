@@ -81,16 +81,35 @@ Raw HID sender.
 | `cornix_right` | `cornix_right` (right peripheral) |
 | `cornix_reset` | `cornix_right` + `settings_reset` |
 
-## RGB indicator (not enabled yet)
+## RGB indicator
 
-RGB battery/connection indicators were requested but are **not enabled**: the
-cornix module marks RGB as an unimplemented future item, and its
-`cornix_indicator` shield references Kconfig symbols that no longer exist on the
-current Zephyr 4.1 toolchain (`WS2812_STRIP` → `WS2812_STRIP_SPI`, and
-`RGBLED_WIDGET_WS2812 / _LED_COUNT / _BRIGHTNESS / _LED_SHARING`, which exist only
-in the `hitsmaxft` rgbled-widget fork). Enabling it would require patching the
-cornix module itself (and validating against the real LED hardware), so it is
-left as a follow-up.
+Each half has its own RGB LEDs that show **that half's battery and connection
+status**. They are normally off and only light up briefly when something
+happens, so they don't drain the battery.
+
+**Battery (shown when you turn the half on):**
+
+| Color | Meaning |
+|---|---|
+| 🟢 Green | Battery high (80%+) |
+| 🟡 Yellow | Battery medium (20–80%) |
+| 🔴 Red | Battery low / critical (under 20%) |
+
+**Connection (shown when the half connects to or drops from the dongle):**
+
+| Color | Meaning |
+|---|---|
+| 🔵 Blue | Connected to the dongle |
+| 🔴 Red | Not connected |
+
+Notes:
+
+- The LEDs do **not** show the active layer or the Bluetooth profile. Those are
+  only known by the dongle, not by the halves where the LEDs are, so they can't
+  be displayed there.
+- Only the two halves (`cornix_left` / `cornix_right`) have LEDs — the dongle has
+  none. After this change you only need to reflash the halves; the dongle is
+  unchanged.
 
 ## Building locally (from the workspace root)
 
