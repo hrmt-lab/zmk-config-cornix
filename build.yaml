@@ -13,16 +13,15 @@ include:
     snippet: studio-rpc-usb-uart nrf52840-nosd
     artifact-name: cornix_dongle
 
-  # NOTE: RGB indicator (cornix_indicator) is intentionally omitted. The cornix
-  # module marks RGB as an unimplemented future item and its cornix_indicator
-  # shield uses Kconfig symbols incompatible with the current Zephyr 4.1 toolchain
-  # (WS2812_STRIP -> WS2812_STRIP_SPI; RGBLED_WIDGET_WS2812/_LED_COUNT/... exist
-  # only in the hitsmaxft rgbled-widget fork). Enabling it requires patching the
-  # cornix module itself. See README.
+  # WS2812 RGB indicator (cornix_indicator shield) drives each half's 2 on-board
+  # LEDs to show its own battery + connection. Layer is not shown (central-only
+  # state, not forwarded to peripherals). Uses gohanda11/zmk-ws2812-driver.
   - board: cornix_ph_left
+    shield: cornix_indicator
     artifact-name: cornix_left
 
   - board: cornix_right
+    shield: cornix_indicator
     artifact-name: cornix_right
 
   - board: cornix_right

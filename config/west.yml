@@ -5,6 +5,8 @@ manifest:
       url-base: https://github.com/zmkfirmware
     - name: hrmt-lab
       url-base: https://github.com/hrmt-lab
+    - name: gohanda11
+      url-base: https://github.com/gohanda11
   projects:
     - name: zmk
       remote: zmkfirmware
@@ -24,6 +26,10 @@ manifest:
       revision: custom/raw-hid-custom
     - name: zmk-rawhid-app
       remote: hrmt-lab
+      revision: main
+    # WS2812 status LED widget (battery + connection on peripheral halves)
+    - name: zmk-ws2812-driver
+      remote: gohanda11
       revision: main
   self:
     path: config
