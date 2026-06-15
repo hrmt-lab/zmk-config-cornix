@@ -1,1 +1,1 @@
-# This config repo has no extra C sources to build.
+target_sources_ifdef(CONFIG_CORNIX_CHARGING_INDICATOR app PRIVATE src/charging_indicator.c)

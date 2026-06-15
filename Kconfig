@@ -1,2 +1,34 @@
-# No config-repo-specific Kconfig symbols.
-# RawHID / Prospector options live in their respective modules.
+config CORNIX_CHARGING_INDICATOR
+    bool "Cornix USB-powered charging indicator"
+    depends on WS2812_WIDGET && USB_DEVICE_STACK && ZMK_BATTERY_REPORTING
+    default y
+    help
+      Blink the half's WS2812 LEDs while USB power is present and the battery
+      estimate is below the configured full level. This is a USB-powered
+      indicator, not a charger IC status signal.
+
+if CORNIX_CHARGING_INDICATOR
+
+config CORNIX_CHARGING_INDICATOR_FULL_LEVEL
+    int "Battery percentage treated as full"
+    default 100
+    range 1 100
+
+config CORNIX_CHARGING_INDICATOR_COLOR
+    hex "Charging indicator color"
+    default 0x004000
+
+config CORNIX_CHARGING_INDICATOR_STEP_MS
+    int "Charging indicator breath step duration"
+    default 35
+
+config CORNIX_CHARGING_INDICATOR_BREATH_STEPS
+    int "Charging indicator breath steps"
+    default 24
+    range 2 255
+
+config CORNIX_CHARGING_INDICATOR_OFF_HOLD_MS
+    int "Charging indicator off hold duration"
+    default 840
+
+endif # CORNIX_CHARGING_INDICATOR
