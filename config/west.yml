@@ -23,10 +23,12 @@ manifest:
     # Raw HID transport + application protocol (time / layer / AI usage)
     - name: zmk-raw-hid
       remote: hrmt-lab
-      revision: custom/raw-hid-custom
+    # revision: custom/raw-hid-custom
+      revision: feat/keymap-advanced-behaviors
     - name: zmk-rawhid-app
       remote: hrmt-lab
-      revision: main
+    # revision: main
+      revision: feat/keymap-advanced-behaviors
     # WS2812 status LED widget (battery + connection on peripheral halves)
     - name: zmk-ws2812-driver
       remote: gohanda11

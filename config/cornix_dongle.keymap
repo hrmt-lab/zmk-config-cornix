@@ -157,7 +157,6 @@
 
     combos {
         compatible = "zmk,combos";
-        status = "disabled";
 
         cb_esc {
             bindings = <&kp ESC>;
