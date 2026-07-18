@@ -338,3 +338,13 @@
         };
     };
 };
+
+/* Keep Keylink Studio's scroll assignments and runtime encoder taps aligned
+ * with the same values used by this keymap. */
+/ {
+    keylink_encoder_runtime: keylink_encoder_runtime {
+        compatible = "keylink,encoder-runtime";
+        scroll-value = <ZMK_POINTING_DEFAULT_SCRL_VAL>;
+        sensor-behavior = <&inc_dec_ms>;
+    };
+};
